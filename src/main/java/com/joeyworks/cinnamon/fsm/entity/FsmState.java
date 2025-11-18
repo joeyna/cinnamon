@@ -73,9 +73,9 @@ public class FsmState extends RepositoryState {
     @CollectionTable(name = "deferred_events", foreignKey = @ForeignKey(name = "fk_state_deferred_events"))
     private Set<String> deferredEvents;
 
-//    @ManyToOne(fetch = FetchType.EAGER)
-//    @JoinColumn(name = "fsm_definition_id", foreignKey = @ForeignKey(name = "fk_fsm_state_definition"))
-//    private FsmDefinition fsmDefinition;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "definition_id", foreignKey = @ForeignKey(name = "fk_fsm_state_definition"))
+    private FsmDefinition fsmDefinition;
 
     /**
      * Instantiates a new jpa repository state.
@@ -259,7 +259,8 @@ public class FsmState extends RepositoryState {
 
 
     public static FsmState ofInitial(Long id ,String machineId ,String state ,Boolean initial ,PseudoStateKind kind
-            ,Set<FsmAction> stateActions ,Set<FsmAction> entryActions ,Set<FsmAction> exitActions){
+            ,Set<FsmAction> stateActions ,Set<FsmAction> entryActions ,Set<FsmAction> exitActions
+            , FsmDefinition fsmDefinition) {
         return new FsmState(
                 id
                 , machineId
@@ -274,6 +275,15 @@ public class FsmState extends RepositoryState {
                 , entryActions
                 , exitActions
                 , null
+                , fsmDefinition
         );
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public Long getDefinitionId(){
+        return fsmDefinition.getId();
     }
 }

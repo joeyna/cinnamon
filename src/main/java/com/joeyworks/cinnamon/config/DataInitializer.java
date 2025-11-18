@@ -33,6 +33,7 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        FsmDefinition fsmDefinition = null;
         FsmState fsmState1 = null;
         FsmState fsmState2 = null;
         FsmAction fsmAction = null;
@@ -42,7 +43,8 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         if (fsmDefinitionRepository.count() == 0) {
-            fsmDefinitionRepository.save(FsmDefinition.of(null, "ALARM", 1, null, null, "ALARM"));
+            fsmDefinition = FsmDefinition.of(null, "ALARM", 1, null, null, "ALARM");
+            fsmDefinitionRepository.save(fsmDefinition);
         }
         if (fsmActionRepository.count() == 0) {
             fsmAction = FsmAction.of(null, "SlackNotification", null);
@@ -53,15 +55,15 @@ public class DataInitializer implements CommandLineRunner {
             Set<FsmAction> actionSet = new HashSet<>();
             actionSet.add(fsmAction);
 
-            fsmState1 = FsmState.ofInitial(1L,"1","EVENT_RECIEVED",true, PseudoStateKind.INITIAL, null,null,null );
+            fsmState1 = FsmState.ofInitial(1L,"1","EVENT_RECIEVED",true, PseudoStateKind.INITIAL, null,null,null, fsmDefinition);
             fsmStateRepository.save(fsmState1);
 
-            fsmState2 = FsmState.ofInitial(2L,"1","EVENT_COMPLETED",false, PseudoStateKind.END, null,actionSet,null );
+            fsmState2 = FsmState.ofInitial(2L,"1","EVENT_COMPLETED",false, PseudoStateKind.END, null,actionSet,null, fsmDefinition);
             fsmStateRepository.save(fsmState2);
         }
 
         if(fsmTransitionRepository.count() == 0) {
-            fsmTransitionRepository.save(FsmTransition.ofInitial("1", fsmState1, fsmState2, "EVENT_CONFIRM"));
+            fsmTransitionRepository.save(FsmTransition.ofInitial("1", fsmState1, fsmState2, "EVENT_CONFIRM", fsmDefinition));
         }
     }
 }

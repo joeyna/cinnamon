@@ -53,6 +53,10 @@ public class FsmTransition extends RepositoryTransition {
     @JoinColumn(foreignKey = @ForeignKey(name = "fk_transition_guard"))
     private FsmGuard guard;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "definition_id", foreignKey = @ForeignKey(name = "fk_fsm_transition_definition"))
+    private FsmDefinition fsmDefinition;
+
     /**
      * Instantiates a new jpa repository transition.
      */
@@ -170,7 +174,11 @@ public class FsmTransition extends RepositoryTransition {
     }
 
 
-    public static FsmTransition ofInitial(String machineId, FsmState source, FsmState target, String event) {
-        return new FsmTransition(machineId, source, target, event);
+    public static FsmTransition ofInitial(String machineId, FsmState source, FsmState target, String event, FsmDefinition fsmDefinition) {
+        return new FsmTransition(null, machineId, source, target, event, null, null, null, fsmDefinition);
+    }
+
+    public Long getId() {
+        return id;
     }
 }

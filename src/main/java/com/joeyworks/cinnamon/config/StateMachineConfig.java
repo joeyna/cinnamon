@@ -1,6 +1,7 @@
 package com.joeyworks.cinnamon.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.joeyworks.cinnamon.fsm.entity.FsmState;
 import com.joeyworks.cinnamon.fsm.interceptor.FsmPersistingStateMachineInterceptor;
 import com.joeyworks.cinnamon.fsm.interceptor.FsmStateMachineRuntimePersister;
 import com.joeyworks.cinnamon.fsm.repository.FsmStateMachineRepository;
@@ -19,7 +20,7 @@ public class StateMachineConfig extends StateMachineConfigurerAdapter<String, St
     private final ObjectMapper objectMapper;
 
     @Bean
-    public StateMachineRuntimePersister<String, String, String> stateMachineRuntimePersister(FsmStateMachineRepository fsmStateMachineRepository) {
+    public StateMachineRuntimePersister<FsmState, String, String> stateMachineRuntimePersister(FsmStateMachineRepository fsmStateMachineRepository) {
         return new FsmPersistingStateMachineInterceptor<>(new FsmStateMachineRuntimePersister<>(fsmStateMachineRepository),  objectMapper);
     }
 }

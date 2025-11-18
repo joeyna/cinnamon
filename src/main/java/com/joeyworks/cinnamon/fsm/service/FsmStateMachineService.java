@@ -40,7 +40,7 @@ public class FsmStateMachineService {
     private final FsmTransitionRepository transitionRepository;
 
     private final FsmStateMachineRepository stateMachineRepository;
-    private final StateMachineRuntimePersister<String, String, String> persister;
+    private final StateMachineRuntimePersister<FsmState, String, String> persister;
 
     private final ApplicationContext applicationContext;
 
@@ -52,7 +52,7 @@ public class FsmStateMachineService {
 
     public void sendEvent(String businessId, TransitionEvent event) throws Exception {
         log.info("FsmStateMachineService::sendEvent - businessId : {}, event : {}", businessId, event);
-        StateMachine<String, String> sm = restore(businessId);
+        StateMachine<FsmState, String> sm = restore(businessId);
 
         Message<String> msg = MessageBuilder
                 .withPayload(event.name())
@@ -68,8 +68,8 @@ public class FsmStateMachineService {
      * @return
      * @throws Exception
      */
-    public StateMachine<String, String> restore(String businessId) throws Exception {
-        StateMachineContext<String, String> context = persister.read(businessId);
+    public StateMachine<FsmState, String> restore(String businessId) throws Exception {
+        StateMachineContext<FsmState, String> context = persister.read(businessId);
 
         if (context == null)
             throw new RuntimeException("context is incorrect :: CONTEXT NOT FOUND : " + businessId);
@@ -79,7 +79,7 @@ public class FsmStateMachineService {
         if (definitionId == null)
             throw new RuntimeException("context is incorrect :: FLOW ID NOT FOUND : " + businessId);
 
-        StateMachine<String, String> sm = build(definitionId);
+        StateMachine<FsmState, String> sm = build(definitionId);
 
 
         //인터셉터, context 등록.
@@ -102,13 +102,13 @@ public class FsmStateMachineService {
      * @return
      * @throws Exception
      */
-    public StateMachine<String, String> create(String definitionId, String businessId) throws Exception {
+    public StateMachine<FsmState, String> create(String definitionId, String businessId) throws Exception {
 
-        StateMachine<String, String> sm = build(definitionId);
+        StateMachine<FsmState, String> sm = build(definitionId);
 
         //StateMachineID 세팅
-        if (sm instanceof AbstractStateMachine<String, String>)
-            ((AbstractStateMachine<String, String>) sm).setId(businessId);
+        if (sm instanceof AbstractStateMachine<FsmState, String>)
+            ((AbstractStateMachine<FsmState, String>) sm).setId(businessId);
 
         //인터셉터 등록
         sm.getStateMachineAccessor()
@@ -129,35 +129,35 @@ public class FsmStateMachineService {
     }
 
 
-    private StateMachine<String, String> build(String definitionId) throws Exception {
+    private StateMachine<FsmState, String> build(String definitionId) throws Exception {
         List<FsmState> states = stateRepository.findByMachineId(definitionId);
         List<FsmTransition> transitions = transitionRepository.findByMachineId(definitionId);
 
-        StateMachineBuilder.Builder<String, String> builder = StateMachineBuilder.builder();
+        StateMachineBuilder.Builder<FsmState, String> builder = StateMachineBuilder.builder();
 
         // State
         var stateConfig = builder.configureStates().withStates();
         for (FsmState s : states) {
-            if (s.isInitial() != null && s.isInitial()) stateConfig.initial(s.getState());
-            if (PseudoStateKind.END.equals(s.getKind())) stateConfig.end(s.getState());
-            stateConfig.state(s.getState());
+            if (s.isInitial() != null && s.isInitial()) stateConfig.initial(s);
+            if (PseudoStateKind.END.equals(s.getKind())) stateConfig.end(s);
+            stateConfig.state(s);
 
             //entry action
             for (FsmAction actions : s.getEntryActions()) {
                 resolveActionOptional(actions.getName())
-                        .ifPresent(action -> stateConfig.stateEntry(s.getState(), action));
+                        .ifPresent(action -> stateConfig.stateEntry(s, action));
             }
 
             //exit action
             for (FsmAction actions : s.getExitActions()) {
                 resolveActionOptional(actions.getName())
-                        .ifPresent(action -> stateConfig.stateExit(s.getState(), action));
+                        .ifPresent(action -> stateConfig.stateExit(s, action));
             }
 
             //state action
             for (FsmAction actions : s.getStateActions()) {
                 resolveActionOptional(actions.getName())
-                        .ifPresent(action -> stateConfig.state(s.getState(), action));
+                        .ifPresent(action -> stateConfig.state(s, action));
             }
         }
 
@@ -165,8 +165,8 @@ public class FsmStateMachineService {
         var transitionsConfig = builder.configureTransitions();
         for (FsmTransition t : transitions) {
             var transition = transitionsConfig.withExternal()
-                    .source(t.getSource().getState())
-                    .target(t.getTarget().getState())
+                    .source(t.getSource())
+                    .target(t.getTarget())
                     .event(t.getEvent());
 
             //transition action
@@ -181,13 +181,13 @@ public class FsmStateMachineService {
     }
 
     @SuppressWarnings("unchecked")
-    private Optional<Action<String, String>> resolveActionOptional(String beanName) {
+    private Optional<Action<FsmState, String>> resolveActionOptional(String beanName) {
         if (!applicationContext.containsBean(beanName)) {
             return Optional.empty();
         }
         Object bean = applicationContext.getBean(beanName);
         if (bean instanceof Action) {
-            return Optional.of((Action<String, String>) bean);
+            return Optional.of((Action<FsmState, String>) bean);
         } else {
             return Optional.empty();
         }
